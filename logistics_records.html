@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>物流方案记录</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .record-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .record-table th, .record-table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        .record-table th {
+            background-color: #f5f5f5;
+        }
+        .record-table tr:hover {
+            background-color: #f9f9f9;
+        }
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .button:hover {
+            background-color: #45a049;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>物流方案记录</h2>
+        <div>
+            <a href="logistics_manager.html" class="button">返回主页</a>
+        </div>
+    </div>
+
+    <table class="record-table">
+        <thead>
+            <tr>
+                <th>日期</th>
+                <th>目的港</th>
+                <th>航空公司</th>
+                <th>起运港</th>
+                <th>路线</th>
+                <th>运输时效</th>
+                <th>重量(KG)</th>
+                <th>空运费(USD/KG)</th>
+                <th>提货费(USD)</th>
+                <th>总费用(USD)</th>
+                <th>询问日期</th>
+            </tr>
+        </thead>
+        <tbody id="recordsBody">
+            <!-- 记录将通过JavaScript动态添加 -->
+        </tbody>
+    </table>
+
+    <script>
+        function loadRecords() {
+            const records = JSON.parse(localStorage.getItem('logisticsRecords') || '[]');
+            const tbody = document.getElementById('recordsBody');
+            tbody.innerHTML = '';
+
+            records.forEach(record => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${record.date}</td>
+                    <td>${record.destination}</td>
+                    <td>${record.airline}</td>
+                    <td>${record.origin}</td>
+                    <td>${record.route}</td>
+                    <td>${record.transitTime}</td>
+                    <td>${record.weight}</td>
+                    <td>${record.airFreight}</td>
+                    <td>${record.pickupCharge}</td>
+                    <td>${record.total}</td>
+                    <td>${new Date().toLocaleDateString()}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // 页面加载时显示记录
+        window.addEventListener('load', loadRecords);
+    </script>
+</body>
+</html>
