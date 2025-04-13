@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>里斯本物流方案计算器</title>
+    <style>
+        /* 保持与之前相同的样式 */
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h2>里斯本物流方案计算器</h2>
+    <form id="logisticsForm">
+        <div class="form-group">
+            <label>货物总重量 (KG):</label>
+            <input type="number" id="weight" required step="0.01">
+        </div>
+
+        <div class="form-group">
+            <label>提货费用 (USD/KG):</label>
+            <input type="number" id="pickupCharge" required step="0.01">
+        </div>
+
+        <div class="form-group">
+            <label>空运费 (USD/KG):</label>
+            <input type="number" id="airFreight" required step="0.01">
+        </div>
+
+        <div class="form-group">
+            <label>航空公司:</label>
+            <select id="airline" required>
+                <option value="LH">LH</option>
+                <option value="3V">3V</option>
+                <option value="Special">Special line</option>
+                <option value="JD">JD</option>
+                <option value="CV">CV</option>
+                <option value="KL">KL</option>
+                <option value="UPS">UPS</option>
+                <option value="TK">TK</option>
+                <option value="EK">EK</option>
+                <option value="HU">HU</option>
+                <option value="DHL">DHL</option>
+                <option value="EY">EY</option>
+                <option value="PO">PO</option>
+                <option value="QR">QR</option>
+                <option value="CA">CA</option>
+                <option value="Y8">Y8</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>起运港:</label>
+            <select id="origin" required>
+                <option value="PVG">PVG (上海浦东)</option>
+                <option value="TNA">TNA (济南)</option>
+                <option value="SZX">SZX (深圳)</option>
+                <option value="XMN">XMN (厦门)</option>
+                <option value="PEK">PEK (北京)</option>
+                <option value="HKG">HKG (香港)</option>
+                <option value="HGH">HGH (杭州)</option>
+                <option value="CGO">CGO (郑州)</option>
+                <option value="CTU">CTU (成都)</option>
+                <option value="TPE">TPE (台北)</option>
+                <option value="ICN">ICN (首尔)</option>
+                <option value="SGN">SGN (胡志明)</option>
+                <option value="NKG">NKG (南京)</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>额外费用 (USD):</label>
+            <input type="number" id="additionalCost" required step="0.01" value="0">
+        </div>
+
+        <button type="submit">生成方案</button>
+    </form>
+
+    <div id="result">
+        <h3>物流方案</h3>
+        <pre id="planOutput"></pre>
+    </div>
+
+    <script>
+        const routes = {
+            'LH_PVG': { route: 'PVG-FRA-LIS', tt: '3-5days' },
+            '3V_TNA': { route: 'TNA-LGG-LIS', tt: '4-6days' },
+            'Special_SZX': { route: 'SZX-LIS', tt: '15days' },
+            'JD_PVG': { route: 'PVG-LIS', tt: '3-5days' },
+            'CV_XMN': { route: 'XMN-HKG-LUX-LIS', tt: '4-6days' },
+            'KL_PVG': { route: 'PVG-AMS-LIS', tt: '5-6days' },
+            'UPS_SZX': { route: 'SZX-HKG-LIS', tt: '7-10days' },
+            'TK_PEK': { route: 'PEK-IST-LIS', tt: '4-6days' },
+            'CV_HKG': { route: 'HKG-LUX-LIS', tt: '4-6days' },
+            'TK_SZX': { route: 'SZX-IST-LIS', tt: '4-6days' },
+            'EK_PEK': { route: 'PEK-DXB-LIS', tt: '3-5days' },
+            'HU_HGH': { route: 'HGH-LIS', tt: '4-6days' },
+            'DHL_SZX': { route: 'SZX-LIS', tt: '8-10days' },
+            'EY_PVG': { route: 'PVG-AUH-LIS', tt: '3-5days' },
+            'EY_PEK': { route: 'PEK-AUH-LIS', tt: '3-5days' },
+            'JD_HGH': { route: 'HGH-LIS', tt: '3-5days' },
+            'EK_PVG': { route: 'PVG-DXB-LIS', tt: '3-5days' },
+            'LH_PEK': { route: 'PEK-FRA-LIS', tt: '3-5days' },
+            'TK_CGO': { route: 'CGO-IST-LIS', tt: '3-5days' },
+            'EK_HKG': { route: 'HKG-DXB-LIS', tt: '3-5days' },
+            'PO_HKG': { route: 'HKG-LEJ-LIS', tt: '3-5days' },
+            'LH_HKG': { route: 'HKG-FRA-LIS', tt: '3-5days' },
+            'QR_PVG': { route: 'PVG-DOH-LIS', tt: '3-5days' },
+            'LH_CTU': { route: 'CTU-FRA-LIS', tt: '3-5days' },
+            'CV_PVG': { route: 'PVG-LUX-LIS', tt: '4-6days' },
+            'CV_CGO': { route: 'CGO-LUX-LIS', tt: '4-6days' },
+            'EK_TPE': { route: 'TPE-DXB-LIS', tt: '4-5days' },
+            'TK_PVG': { route: 'PVG-IST-LIS', tt: '3-5days' },
+            'LH_ICN': { route: 'ICN-FRA-LIS', tt: '3-5days' },
+            'TK_ICN': { route: 'ICN-IST-LIS', tt: '3-5days' },
+            'QR_PEK': { route: 'PEK-DOH-LIS', tt: '3-5days' },
+            'CA_PEK': { route: 'PEK-MAD-LIS', tt: '3-5days' },
+            'HU_PEK': { route: 'PEK-BRU-LIS', tt: '4-6days' },
+            'KL_PEK': { route: 'PEK-AMS-LIS', tt: '4-6days' },
+            'EY_SGN': { route: 'SGN-NRT-AUH-LIS', tt: '5-6days' },
+            'Y8_NKG': { route: 'NKG-AMS-LIS', tt: '3-5days' },
+            'EY_SZX': { route: 'SZX-AUH-LIS', tt: '3-5days' },
+            'CA_SZX': { route: 'SZX-MAD-LIS', tt: '4-6days' }
+        };
+
+        document.getElementById('logisticsForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const weight = parseFloat(document.getElementById('weight').value);
+            const pickupCharge = parseFloat(document.getElementById('pickupCharge').value);
+            const airFreight = parseFloat(document.getElementById('airFreight').value);
+            const additionalCost = parseFloat(document.getElementById('additionalCost').value) || 0;
+            const airline = document.getElementById('airline').value;
+            const origin = document.getElementById('origin').value;
+
+            const routeKey = `${airline}_${origin}`;
+            const routeInfo = routes[routeKey] || { route: `${origin}-MEX`, tt: '3-5days' };
+
+            const finalAF = ((airFreight / 7.21) + 0.13).toFixed(2);
+            const pickupTotal = Math.max(pickupCharge * weight, 60);
+            const terminalCharge = Math.max(0.08 * weight, 8);
+            const total = (finalAF * weight) + terminalCharge + 40 + 35 + 15 + pickupTotal + additionalCost;
+
+            const plan = `
+Total: ${weight}KG
+
+EXW net air rate from Shipper's door to LIS airport:
+
+Option 1
+Airline: ${airline}
+A/F: ${finalAF}
+Route: ${routeInfo.route}
+TT: ${routeInfo.tt}
+
+Local charge:
+Handling charge: USD40/BL
+Custom clearance: USD35/BL
+Airline doc & ENS: USD15/BL
+Pickup charge: USD${pickupTotal.toFixed(2)}
+Additional cost: USD${additionalCost.toFixed(2)}
+
+Total: USD${total.toFixed(2)}`;
+
+            document.getElementById('planOutput').textContent = plan;
+            document.getElementById('result').style.display = 'block';
+        });
+    </script>
+</body>
+</html>

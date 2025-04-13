@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>布达佩斯物流方案计算器</title>
+    <style>
+        /* 保持与之前相同的样式 */
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h2>布达佩斯物流方案计算器</h2>
+    <form id="logisticsForm">
+        <div class="form-group">
+            <label>货物总重量 (KG):</label>
+            <input type="number" id="weight" required step="0.01">
+        </div>
+
+        <div class="form-group">
+            <label>提货费用 (USD/KG):</label>
+            <input type="number" id="pickupCharge" required step="0.01">
+        </div>
+
+        <div class="form-group">
+            <label>空运费 (USD/KG):</label>
+            <input type="number" id="airFreight" required step="0.01">
+        </div>
+
+        <div class="form-group">
+            <label>航空公司:</label>
+            <select id="airline" required>
+                <option value="EK">EK</option>
+                <option value="CZ">CZ</option>
+                <option value="CA">CA</option>
+                <option value="HU">HU</option>
+                <option value="LH">LH</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>起运港:</label>
+            <select id="origin" required>
+                <option value="HKG">HKG (香港)</option>
+                <option value="CAN">CAN (广州)</option>
+                <option value="PEK">PEK (北京)</option>
+                <option value="SZX">SZX (深圳)</option>
+                <option value="PVG">PVG (上海浦东)</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>额外费用 (USD):</label>
+            <input type="number" id="additionalCost" required step="0.01" value="0">
+        </div>
+
+        <button type="submit">生成方案</button>
+    </form>
+
+    <div id="result">
+        <h3>物流方案</h3>
+        <pre id="planOutput"></pre>
+    </div>
+
+    <script>
+        const routes = {
+            'EK_HKG': { route: 'HKG-DXB-BUD', tt: '3-5days' },
+            'CZ_CAN': { route: 'CAN-BUD', tt: '3-5days' },
+            'CA_PEK': { route: 'PEK-FRA-BUD', tt: '3-5days' },
+            'HU_SZX': { route: 'SZX-BUD', tt: '3-5days' },
+            'LH_PVG': { route: 'PVG-FRA-BUD', tt: '3-5days' }
+        };
+
+        document.getElementById('logisticsForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const weight = parseFloat(document.getElementById('weight').value);
+            const pickupCharge = parseFloat(document.getElementById('pickupCharge').value);
+            const airFreight = parseFloat(document.getElementById('airFreight').value);
+            const additionalCost = parseFloat(document.getElementById('additionalCost').value) || 0;
+            const airline = document.getElementById('airline').value;
+            const origin = document.getElementById('origin').value;
+
+            const routeKey = `${airline}_${origin}`;
+            const routeInfo = routes[routeKey] || { route: `${origin}-MEX`, tt: '3-5days' };
+
+            const finalAF = ((airFreight / 7.21) + 0.13).toFixed(2);
+            const pickupTotal = Math.max(pickupCharge * weight, 60);
+            const terminalCharge = Math.max(0.08 * weight, 8);
+            const total = (finalAF * weight) + terminalCharge + 40 + 35 + 15 + pickupTotal + additionalCost;
+
+            const plan = `
+Total: ${weight}KG
+
+EXW net air rate from Shipper's door to BUD airport:
+
+Option 1
+Airline: ${airline}
+A/F: ${finalAF}
+Route: ${routeInfo.route}
+TT: ${routeInfo.tt}
+
+Local charge:
+Handling charge: USD40/BL
+Custom clearance: USD35/BL
+Airline doc & ENS: USD15/BL
+Pickup charge: USD${pickupTotal.toFixed(2)}
+Additional cost: USD${additionalCost.toFixed(2)}
+
+Total: USD${total.toFixed(2)}`;
+
+            document.getElementById('planOutput').textContent = plan;
+            document.getElementById('result').style.display = 'block';
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新拉雷多物流方案计算器</title>
+    <style>
+        /* 保持与之前相同的样式 */
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h2>新拉雷多物流方案计算器</h2>
+    <form id="logisticsForm">
+        <div class="form-group">
+            <label>货物总重量 (KG):</label>
+            <input type="number" id="weight" required step="0.01">
+        </div>
+
+        <div class="form-group">
+            <label>提货费用 (USD/KG):</label>
+            <input type="number" id="pickupCharge" required step="0.01">
+        </div>
+
+        <div class="form-group">
+            <label>空运费 (USD/KG):</label>
+            <input type="number" id="airFreight" required step="0.01">
+        </div>
+
+        <div class="form-group">
+            <label>航空公司:</label>
+            <select id="airline" required>
+                <option value="CX">CX</option>
+                <option value="CZ">CZ</option>
+                <option value="CV">CV</option>
+                <option value="M7">M7</option>
+                <option value="UPS">UPS</option>
+                <option value="5Y">5Y</option>
+                <option value="AF">AF</option>
+                <option value="CA">CA</option>
+                <option value="FX">FX</option>
+                <option value="PO">PO</option>
+                <option value="K4">K4</option>
+                <option value="Charter">Charter</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>起运港:</label>
+            <select id="origin" required>
+                <option value="XMN">XMN (厦门)</option>
+                <option value="PVG">PVG (上海浦东)</option>
+                <option value="HKG">HKG (香港)</option>
+                <option value="CGO">CGO (郑州)</option>
+                <option value="SZX">SZX (深圳)</option>
+                <option value="PEK">PEK (北京)</option>
+                <option value="MFM">MFM (澳门)</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>额外费用 (USD):</label>
+            <input type="number" id="additionalCost" required step="0.01" value="0">
+        </div>
+
+        <button type="submit">生成方案</button>
+    </form>
+
+    <div id="result">
+        <h3>物流方案</h3>
+        <pre id="planOutput"></pre>
+    </div>
+
+    <script>
+        const routes = {
+            'CX_XMN': { route: 'XMN-HKG-NLU', tt: '3-5days' },
+            'CZ_PVG': { route: 'PVG-NLU', tt: '3-5days' },
+            'CX_PVG': { route: 'PVG-HKG-NLU', tt: '3-5days' },
+            'CX_HKG': { route: 'HKG-NLU', tt: '3-5days' },
+            'CV_HKG': { route: 'HKG-NLU', tt: '3-5days' },
+            'M7_CGO': { route: 'CGO-NLU', tt: '3-5days' },
+            'UPS_SZX': { route: 'SZX-NLU', tt: '10-12days' },
+            '5Y_XMN': { route: 'XMN-HKG-NLU', tt: '3-5days' },
+            'AF_PEK': { route: 'PEK-CDG-NLU', tt: '4-6days' },
+            '5Y_HKG': { route: 'HKG-NLU', tt: '3-5days' },
+            'CA_SZX': { route: 'SZX-HKG-NLU', tt: '3-5days' },
+            'FX_SZX': { route: 'SZX-HKG-NLU', tt: '3-5days' },
+            'Charter_CGO': { route: 'CGO-NLU', tt: '3-5days' },
+            '5Y_SZX': { route: 'SZX-HKG-NLU', tt: '2days' },
+            '5Y_PVG': { route: 'PVG-HKG-NLU', tt: '3-5days' },
+            'PO_HKG': { route: 'HKG-LEJ-MIA-NLU', tt: '5-6days' },
+            'Charter_MFM': { route: 'MFM-NLU', tt: '3-5days' },
+            'K4_CGO': { route: 'CGO-NLU', tt: '3-5days' }
+        };
+
+        document.getElementById('logisticsForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const weight = parseFloat(document.getElementById('weight').value);
+            const pickupCharge = parseFloat(document.getElementById('pickupCharge').value);
+            const airFreight = parseFloat(document.getElementById('airFreight').value);
+            const additionalCost = parseFloat(document.getElementById('additionalCost').value) || 0;
+            const airline = document.getElementById('airline').value;
+            const origin = document.getElementById('origin').value;
+
+            const routeKey = `${airline}_${origin}`;
+            const routeInfo = routes[routeKey] || { route: `${origin}-MEX`, tt: '3-5days' };
+
+            const finalAF = ((airFreight / 7.21) + 0.13).toFixed(2);
+            const pickupTotal = Math.max(pickupCharge * weight, 60);
+            const terminalCharge = Math.max(0.08 * weight, 8);
+            const total = (finalAF * weight) + terminalCharge + 40 + 35 + 15 + pickupTotal + additionalCost;
+
+            const plan = `
+Total: ${weight}KG
+
+EXW net air rate from Shipper's door to NLU airport:
+
+Option 1
+Airline: ${airline}
+A/F: ${finalAF}
+Route: ${routeInfo.route}
+TT: ${routeInfo.tt}
+
+Local charge:
+Terminal charge: USD0.08/KG,MIN USD8/BL
+Handling charge: USD40/BL
+Custom clearance: USD35/BL
+Airline doc & ENS: USD15/BL
+Pickup charge: USD${pickupTotal.toFixed(2)}
+Additional cost: USD${additionalCost.toFixed(2)}
+
+Total: USD${total.toFixed(2)}`;
+
+            document.getElementById('planOutput').textContent = plan;
+            document.getElementById('result').style.display = 'block';
+        });
+    </script>
+</body>
+</html>
