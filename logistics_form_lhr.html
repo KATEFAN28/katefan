@@ -163,7 +163,7 @@
             const finalAF = ((airFreight / 7.21) + 0.13).toFixed(2);
             const pickupTotal = Math.max(pickupCharge * weight, 60);
             const terminalCharge = Math.max(0.08 * weight, 8);
-            const total = (finalAF * weight) + terminalCharge + 40 + 35 + 15 + pickupTotal + additionalCost;
+            const total = (finalAF * weight) + 40 + 35 + 15 + pickupTotal + additionalCost;
 
             const plan = `
 Total: ${weight}KG
